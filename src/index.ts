@@ -22,108 +22,106 @@ import { handleCallbackQuery } from './bot/handlers/callbackRouter';
 /**
  * Main entry point for the WhySpent Bot
  */
-async function main() {
-    console.log('🚀 Starting WhySpent Bot...');
+async function bootstrap() {
+    try {
+        console.log('🚀 Initializing WhySpent Bot...');
 
-    // Validate environment
-    validateEnv();
+        // 1. Environment Validation
+        validateEnv();
 
-    // Initialize database (async for sql.js)
-    await initDb();
+        // 2. Database Connection - MUST stay open
+        await initDb();
 
-    // Create bot instance
-    const bot = new Bot(env.BOT_TOKEN);
+        // 3. Bot Instance Setup
+        const bot = new Bot(env.BOT_TOKEN);
 
-    // Set bot commands for the menu
-    await bot.api.setMyCommands(BOT_COMMANDS);
-    console.log('📋 Bot commands registered');
+        // Register Bot Middleware & Handlers
+        bot.use(rateLimit);
+        bot.command('start', handleStart);
+        bot.command('help', handleHelp);
+        bot.command('open', handleOpen);
+        bot.command('feedback', handleFeedback);
+        bot.command('settings', handleSettings);
+        bot.command('privacy', handlePrivacy);
+        bot.command('donate', handleDonate);
+        bot.command('broadcast', handleBroadcast);
+        bot.command('stats', handleStats);
+        bot.command('ai', handleAI);
+        bot.on('callback_query:data', handleCallbackQuery);
+        bot.on('message:text', handleTextMessage);
 
-    // Register middleware
-    bot.use(rateLimit);
+        // Global Error Handler
+        bot.catch((err) => {
+            const ctx = err.ctx;
+            console.error(`Error while handling update ${ctx.update.update_id}:`);
+            const e = err.error;
+            if (e instanceof GrammyError) console.error('Grammy Error:', e.description);
+            else if (e instanceof HttpError) console.error('HTTP Error:', e);
+            else console.error('Unknown Error:', e);
+        });
 
-    // Register command handlers
-    bot.command('start', handleStart);
-    bot.command('help', handleHelp);
-    bot.command('open', handleOpen);
-    bot.command('feedback', handleFeedback);
-    bot.command('settings', handleSettings);
-    bot.command('privacy', handlePrivacy);
-    bot.command('donate', handleDonate);
-    bot.command('broadcast', handleBroadcast);
-    bot.command('stats', handleStats);
-    bot.command('ai', handleAI);
+        // 4. Background Tasks
+        startRateLimitCleanup();
 
-    // Register callback query handler
-    bot.on('callback_query:data', handleCallbackQuery);
+        // 5. Register Commands (Async, don't block startup if possible)
+        bot.api.setMyCommands(BOT_COMMANDS).catch(err => {
+            console.warn('⚠️ Warning: Could not register bot commands:', err.message);
+        });
 
-    // Register text message handler (for non-command messages)
-    bot.on('message:text', handleTextMessage);
+        // 6. Shutdown Handlers (Cleanup only on signal)
+        const gracefulShutdown = async (signal: string) => {
+            console.log(`\n👋 Received ${signal}. Closing bot and database...`);
+            try {
+                await bot.stop();
+                closeDb();
+            } catch (err) {
+                console.error('Error during shutdown:', err);
+            }
+            process.exit(0);
+        };
 
-    // Error handling
-    bot.catch((err) => {
-        const ctx = err.ctx;
-        console.error(`Error while handling update ${ctx.update.update_id}:`);
+        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-        const e = err.error;
-        if (e instanceof GrammyError) {
-            console.error('Error in request:', e.description);
-        } else if (e instanceof HttpError) {
-            console.error('Could not contact Telegram:', e);
+        // 7. Start the Server (Webhook vs Polling)
+        const PORT = process.env.PORT;
+
+        if (PORT) {
+            // WEBHOOK MODE (Production / Render)
+            const app = express();
+            app.use(express.json());
+
+            // Health Check for Render
+            app.get('/', (req, res) => res.send('WhySpent Bot Status: Online 🚀'));
+
+            // Webhook Endpoint
+            app.post('/telegram/webhook', (req, res, next) => {
+                console.log('📩 Incoming Telegram update:', req.body?.update_id || 'unknown');
+                next();
+            }, webhookCallback(bot, 'express'));
+
+            app.listen(PORT, () => {
+                console.log("Listening on port", PORT);
+                console.log(`📡 Webhook endpoint active at /telegram/webhook`);
+            });
         } else {
-            console.error('Unknown error:', e);
+            // POLLING MODE (Local Development)
+            console.log('✅ Port not found, starting in long polling mode...');
+            bot.start({
+                onStart: () => {
+                    console.log('🤖 Bot started successfully via polling!');
+                },
+            });
         }
-    });
 
-    // Start rate limit cleanup
-    startRateLimitCleanup();
+        console.log(`📊 Admin IDs: ${env.ADMIN_IDS.join(', ') || 'none configured'}`);
+        console.log(`🔗 Mini App URL: ${env.MINIAPP_URL}`);
 
-    // Graceful shutdown
-    const shutdown = async () => {
-        console.log('\n👋 Shutting down gracefully...');
-        await bot.stop();
-        closeDb();
-        process.exit(0);
-    };
-
-    process.on('SIGINT', shutdown);
-    process.on('SIGTERM', shutdown);
-
-    // Start detection
-    console.log(`📊 Admin IDs: ${env.ADMIN_IDS.join(', ') || 'none configured'}`);
-    console.log(`🔗 Mini App URL: ${env.MINIAPP_URL}`);
-
-    const PORT = process.env.PORT;
-    if (PORT) {
-        // PRODUCTION: Start Webhook Server
-        const app = express();
-        app.use(express.json());
-
-        // Health check endpoint for Render
-        app.get('/', (req, res) => res.send('WhySpent Bot is healthy! 🚀'));
-
-        // Webhook endpoint
-        app.post('/telegram/webhook', (req, res, next) => {
-            console.log('📩 Incoming Telegram update:', JSON.stringify(req.body, null, 2));
-            next();
-        }, webhookCallback(bot, 'express'));
-
-        app.listen(PORT, () => {
-            console.log(`🚀 Webhook server listening on port ${PORT}`);
-            console.log('📡 Telegram webhook endpoint active at /telegram/webhook');
-        });
-    } else {
-        // DEVELOPMENT: Start Long Polling
-        console.log('✅ Bot is running with long polling...');
-        await bot.start({
-            onStart: () => {
-                console.log('🤖 Bot started successfully!');
-            },
-        });
+    } catch (error) {
+        console.error('❌ Fatal error during startup:', error);
+        process.exit(1);
     }
 }
 
-// Run the bot
-main().catch((error) => {
-    console.error('❌ Fatal error:', error);
-    process.exit(1);
-});
+// Start the application
+bootstrap();
