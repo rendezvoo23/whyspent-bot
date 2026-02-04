@@ -63,25 +63,23 @@ async function bootstrap() {
         // 4. Background Tasks
         startRateLimitCleanup();
 
-        // 5. Register Commands (Async, don't block startup if possible)
+        // 5. Register Commands (Async)
         bot.api.setMyCommands(BOT_COMMANDS).catch(err => {
             console.warn('⚠️ Warning: Could not register bot commands:', err.message);
         });
 
-        // 6. Shutdown Handlers (Cleanup only on signal)
-        const gracefulShutdown = async (signal: string) => {
-            console.log(`\n👋 Received ${signal}. Closing bot and database...`);
+        // 6. Shutdown Handlers (Do NOT call process.exit)
+        const cleanup = async (signal: string) => {
+            console.log(`\n👋 Received ${signal}. Closing database...`);
             try {
-                await bot.stop();
                 closeDb();
             } catch (err) {
-                console.error('Error during shutdown:', err);
+                console.error('Error during cleanup:', err);
             }
-            process.exit(0);
         };
 
-        process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-        process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+        process.on('SIGINT', () => cleanup('SIGINT'));
+        process.on('SIGTERM', () => cleanup('SIGTERM'));
 
         // 7. Start the Server (Webhook vs Polling)
         const PORT = process.env.PORT;
@@ -92,34 +90,28 @@ async function bootstrap() {
             app.use(express.json());
 
             // Health Check for Render
-            app.get('/', (req, res) => res.send('WhySpent Bot Status: Online 🚀'));
+            app.get('/', (req, res) => res.send('WhySpent Bot is Online 🚀'));
 
             // Webhook Endpoint
-            app.post('/telegram/webhook', (req, res, next) => {
-                console.log('📩 Incoming Telegram update:', req.body?.update_id || 'unknown');
-                next();
-            }, webhookCallback(bot, 'express'));
+            app.post('/telegram/webhook', webhookCallback(bot, 'express'));
 
             app.listen(PORT, () => {
                 console.log("Listening on port", PORT);
-                console.log(`📡 Webhook endpoint active at /telegram/webhook`);
             });
         } else {
             // POLLING MODE (Local Development)
             console.log('✅ Port not found, starting in long polling mode...');
-            bot.start({
+            await bot.start({
                 onStart: () => {
                     console.log('🤖 Bot started successfully via polling!');
                 },
             });
         }
 
-        console.log(`📊 Admin IDs: ${env.ADMIN_IDS.join(', ') || 'none configured'}`);
-        console.log(`🔗 Mini App URL: ${env.MINIAPP_URL}`);
-
     } catch (error) {
         console.error('❌ Fatal error during startup:', error);
-        process.exit(1);
+        // We avoid process.exit even here as per instructions, 
+        // but normally a fatal startup error would warrant it.
     }
 }
 
