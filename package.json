@@ -5,10 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "dev:webhook": "tsx watch src/webhook.ts",
     "build": "tsc && npx copyfiles -u 1 src/**/*.sql dist",
-    "start": "node dist/index.js",
-    "start:webhook": "node dist/webhook.js"
+    "start": "node dist/index.js"
   },
   "keywords": [
     "telegram",

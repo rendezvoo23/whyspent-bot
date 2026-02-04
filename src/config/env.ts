@@ -11,7 +11,7 @@ export const env = {
     // Required
     BOT_TOKEN: process.env.BOT_TOKEN || '',
     ADMIN_IDS: (process.env.ADMIN_IDS || '').split(',').map(id => parseInt(id.trim(), 10)).filter(id => !isNaN(id)),
-    MINIAPP_URL: process.env.MINIAPP_URL || '',
+    MINIAPP_URL: process.env.MINIAPP_URL || 'https://happymonday-ten.vercel.app/',
 
     // Optional
     UPDATES_CHANNEL_URL: process.env.UPDATES_CHANNEL_URL || '',
@@ -31,7 +31,7 @@ export const env = {
  * Validate required environment variables
  */
 export function validateEnv(): void {
-    const required = ['BOT_TOKEN', 'MINIAPP_URL'];
+    const required = ['BOT_TOKEN'];
     const missing = required.filter(key => !process.env[key]);
 
     if (missing.length > 0) {

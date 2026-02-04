@@ -1,4 +1,5 @@
-import { Bot, GrammyError, HttpError } from 'grammy';
+import { Bot, GrammyError, HttpError, webhookCallback } from 'grammy';
+import express from 'express';
 import { env, validateEnv } from './config/env';
 import { BOT_COMMANDS } from './config/constants';
 import { initDb, closeDb } from './db/client';
@@ -77,30 +78,48 @@ async function main() {
     startRateLimitCleanup();
 
     // Graceful shutdown
-    process.on('SIGINT', () => {
+    const shutdown = async () => {
         console.log('\n👋 Shutting down gracefully...');
-        bot.stop();
+        await bot.stop();
         closeDb();
         process.exit(0);
-    });
+    };
 
-    process.on('SIGTERM', () => {
-        console.log('\n👋 Shutting down gracefully...');
-        bot.stop();
-        closeDb();
-        process.exit(0);
-    });
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
 
-    // Start long polling
-    console.log('✅ Bot is running with long polling...');
+    // Start detection
     console.log(`📊 Admin IDs: ${env.ADMIN_IDS.join(', ') || 'none configured'}`);
     console.log(`🔗 Mini App URL: ${env.MINIAPP_URL}`);
 
-    await bot.start({
-        onStart: () => {
-            console.log('🤖 Bot started successfully!');
-        },
-    });
+    const PORT = process.env.PORT;
+    if (PORT) {
+        // PRODUCTION: Start Webhook Server
+        const app = express();
+        app.use(express.json());
+
+        // Health check endpoint for Render
+        app.get('/', (req, res) => res.send('WhySpent Bot is healthy! 🚀'));
+
+        // Webhook endpoint
+        app.post('/telegram/webhook', (req, res, next) => {
+            console.log('📩 Incoming Telegram update:', JSON.stringify(req.body, null, 2));
+            next();
+        }, webhookCallback(bot, 'express'));
+
+        app.listen(PORT, () => {
+            console.log(`🚀 Webhook server listening on port ${PORT}`);
+            console.log('📡 Telegram webhook endpoint active at /telegram/webhook');
+        });
+    } else {
+        // DEVELOPMENT: Start Long Polling
+        console.log('✅ Bot is running with long polling...');
+        await bot.start({
+            onStart: () => {
+                console.log('🤖 Bot started successfully!');
+            },
+        });
+    }
 }
 
 // Run the bot
