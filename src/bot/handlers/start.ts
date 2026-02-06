@@ -1,12 +1,10 @@
 import { Context } from 'grammy';
-import { upsertUser, getUser } from '../../services/userService';
 import { getOnboardingKeyboard } from '../../services/miniAppLinks';
-import { t } from '../middlewares/i18n';
-import { SupportedLanguage } from '../../config/constants';
+import { t, isValidLanguage } from '../middlewares/i18n';
+import { DEFAULT_LANGUAGE, SupportedLanguage } from '../../config/constants';
 
 /**
  * Handle /start command
- * - Saves user in database
  * - Sends welcome message with onboarding buttons
  */
 export async function handleStart(ctx: Context): Promise<void> {
@@ -17,15 +15,16 @@ export async function handleStart(ctx: Context): Promise<void> {
         return;
     }
 
-    // Register or update user in database
-    const dbUser = upsertUser(user);
-    const lang = dbUser.language as SupportedLanguage;
+    // Simple language detection without database
+    let lang: SupportedLanguage = DEFAULT_LANGUAGE;
+    if (user.language_code && isValidLanguage(user.language_code)) {
+        lang = user.language_code;
+    }
 
     // Check for start parameter (deep linking)
     const startParam = ctx.match;
     if (startParam) {
         console.log(`User ${user.id} started with parameter: ${startParam}`);
-        // Handle deep linking parameters here if needed
     }
 
     // Build welcome message

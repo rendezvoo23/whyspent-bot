@@ -2,22 +2,9 @@ import { Bot, GrammyError, HttpError, webhookCallback } from 'grammy';
 import express from 'express';
 import { env, validateEnv } from './config/env';
 import { BOT_COMMANDS } from './config/constants';
-import { initDb, closeDb } from './db/client';
 import { rateLimit, startRateLimitCleanup } from './bot/middlewares/rateLimit';
 import { handleStart } from './bot/handlers/start';
-import { handleHelp } from './bot/handlers/help';
-import {
-    handleOpen,
-    handleFeedback,
-    handleSettings,
-    handlePrivacy,
-    handleDonate,
-    handleBroadcast,
-    handleStats,
-    handleAI
-} from './bot/handlers/commands';
-import { handleTextMessage } from './bot/handlers/textRouter';
-import { handleCallbackQuery } from './bot/handlers/callbackRouter';
+import { handleDonate } from './bot/handlers/donate';
 
 /**
  * Main entry point for the WhySpent Bot
@@ -29,26 +16,13 @@ async function bootstrap() {
         // 1. Environment Validation
         validateEnv();
 
-        // 2. Database Connection - MUST stay open
-        await initDb();
-
-        // 3. Bot Instance Setup
+        // 2. Bot Instance Setup
         const bot = new Bot(env.BOT_TOKEN);
 
         // Register Bot Middleware & Handlers
         bot.use(rateLimit);
         bot.command('start', handleStart);
-        bot.command('help', handleHelp);
-        bot.command('open', handleOpen);
-        bot.command('feedback', handleFeedback);
-        bot.command('settings', handleSettings);
-        bot.command('privacy', handlePrivacy);
         bot.command('donate', handleDonate);
-        bot.command('broadcast', handleBroadcast);
-        bot.command('stats', handleStats);
-        bot.command('ai', handleAI);
-        bot.on('callback_query:data', handleCallbackQuery);
-        bot.on('message:text', handleTextMessage);
 
         // Global Error Handler
         bot.catch((err) => {
@@ -60,28 +34,24 @@ async function bootstrap() {
             else console.error('Unknown Error:', e);
         });
 
-        // 4. Background Tasks
+        // 3. Background Tasks
         startRateLimitCleanup();
 
-        // 5. Register Commands (Async)
+        // 4. Register Commands (Async)
         bot.api.setMyCommands(BOT_COMMANDS).catch(err => {
             console.warn('⚠️ Warning: Could not register bot commands:', err.message);
         });
 
-        // 6. Shutdown Handlers (Do NOT call process.exit)
+        // 5. Shutdown Handlers
         const cleanup = async (signal: string) => {
-            console.log(`\n👋 Received ${signal}. Closing database...`);
-            try {
-                closeDb();
-            } catch (err) {
-                console.error('Error during cleanup:', err);
-            }
+            console.log(`\n👋 Received ${signal}. Shutting down...`);
+            // Add any other cleanup logic here
         };
 
         process.on('SIGINT', () => cleanup('SIGINT'));
         process.on('SIGTERM', () => cleanup('SIGTERM'));
 
-        // 7. Start the Server (Webhook vs Polling)
+        // 6. Start the Server (Webhook vs Polling)
         const PORT = process.env.PORT;
 
         if (PORT) {

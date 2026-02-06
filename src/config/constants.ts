@@ -13,13 +13,9 @@ export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];
 export const DEFAULT_LANGUAGE: SupportedLanguage = 'en';
 
 // Bot commands for BotFather
+// Bot commands for BotFather
 export const BOT_COMMANDS = [
     { command: 'start', description: 'Start the bot' },
-    { command: 'help', description: 'Show available commands' },
-    { command: 'open', description: 'Open WhySpent app' },
-    { command: 'feedback', description: 'Send feedback' },
-    { command: 'settings', description: 'Bot settings' },
-    { command: 'privacy', description: 'Privacy information' },
     { command: 'donate', description: 'Support development' },
 ] as const;
 
