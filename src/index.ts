@@ -4,7 +4,7 @@ import { env, validateEnv } from './config/env';
 import { BOT_COMMANDS } from './config/constants';
 import { rateLimit, startRateLimitCleanup } from './bot/middlewares/rateLimit';
 import { handleStart } from './bot/handlers/start';
-import { handleDonate } from './bot/handlers/donate';
+import { handleChannel } from './bot/handlers/channel';
 
 /**
  * Main entry point for the WhySpent Bot
@@ -22,7 +22,7 @@ async function bootstrap() {
         // Register Bot Middleware & Handlers
         bot.use(rateLimit);
         bot.command('start', handleStart);
-        bot.command('donate', handleDonate);
+        bot.command('channel', handleChannel);
 
         // Global Error Handler
         bot.catch((err) => {

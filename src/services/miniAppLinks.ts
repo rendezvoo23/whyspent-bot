@@ -58,9 +58,6 @@ export function getOnboardingKeyboard(): InlineKeyboard {
         keyboard.row();
     }
 
-    // Add Stars donation info button
-    keyboard.text('⭐ Support with Stars', 'donate_info');
-
     return keyboard;
 }
 

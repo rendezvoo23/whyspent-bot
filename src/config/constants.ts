@@ -16,7 +16,7 @@ export const DEFAULT_LANGUAGE: SupportedLanguage = 'en';
 // Bot commands for BotFather
 export const BOT_COMMANDS = [
     { command: 'start', description: 'Start the bot' },
-    { command: 'donate', description: 'Support development' },
+    { command: 'channel', description: 'Our Telegram channel' },
 ] as const;
 
 // User flags

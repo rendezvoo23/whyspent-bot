@@ -13,12 +13,8 @@ const translations: Record<SupportedLanguage, Record<string, string>> = {
         // Commands
         'help.title': '📚 Available Commands',
         'help.commands': `
-/open - Open WhySpent app
-/settings - Change language
-/feedback - Send feedback
-/privacy - Privacy information
-/donate - Support development
-/help - Show this message`,
+/start - Start the bot
+/channel - Our Telegram channel`,
 
         'open.message': 'Ready to track your spending?',
 
@@ -40,15 +36,10 @@ const translations: Record<SupportedLanguage, Record<string, string>> = {
 
 We do not share your data with third parties. Your expense data stays in the app on your device.`,
 
-        'donate.title': '⭐ Support WhySpent',
-        'donate.message': `Thank you for considering support!
-
-You can send Telegram Stars to show appreciation:
-1. Open any message from me
-2. Tap the ⭐ button below
-3. Choose the amount
-
-Every star helps us keep improving WhySpent!`,
+        'channel.title': '📢 WhySpent Journal',
+        'channel.message': 'Stay updated with the latest news, tips, and insights about WhySpent.',
+        'channel.cta': 'Tap the button below to join our Telegram channel.',
+        'channel.button': '🔗 Join Channel',
 
         // Misc
         'error.generic': '❌ Something went wrong. Please try again.',
@@ -81,12 +72,8 @@ Every star helps us keep improving WhySpent!`,
         // Commands
         'help.title': '📚 Доступные команды',
         'help.commands': `
-/open - Открыть WhySpent
-/settings - Изменить язык
-/feedback - Отправить отзыв
-/privacy - Конфиденциальность
-/donate - Поддержать разработку
-/help - Показать это сообщение`,
+/start - Запустить бота
+/channel - Наш Telegram канал`,
 
         'open.message': 'Готовы отслеживать расходы?',
 
@@ -108,15 +95,10 @@ Every star helps us keep improving WhySpent!`,
 
 Мы не передаём данные третьим лицам. Ваши расходы хранятся в приложении на вашем устройстве.`,
 
-        'donate.title': '⭐ Поддержать WhySpent',
-        'donate.message': `Спасибо, что думаете о поддержке!
-
-Вы можете отправить Telegram Stars:
-1. Откройте любое моё сообщение
-2. Нажмите кнопку ⭐ внизу
-3. Выберите количество
-
-Каждая звезда помогает нам улучшать WhySpent!`,
+        'channel.title': '📢 WhySpent Journal',
+        'channel.message': 'Будьте в курсе последних новостей, советов и инсайтов о WhySpent.',
+        'channel.cta': 'Нажмите кнопку ниже, чтобы присоединиться к нашему каналу.',
+        'channel.button': '🔗 Перейти в канал',
 
         // Misc
         'error.generic': '❌ Что-то пошло не так. Попробуйте ещё раз.',
