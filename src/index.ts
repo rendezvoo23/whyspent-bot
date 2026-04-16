@@ -63,7 +63,33 @@ async function bootstrap() {
             app.get('/', (req, res) => res.send('WhySpent Bot is Online 🚀'));
 
             // Webhook Endpoint
-            app.post('/telegram/webhook', webhookCallback(bot, 'express'));
+            const grammyWebhook = webhookCallback(bot, 'express');
+            app.post('/telegram/webhook', async (req, res, next) => {
+                const update = req.body;
+                
+                // Проверяем, связано ли событие с Telegram Stars (платежами)
+                if (update.pre_checkout_query || (update.message && update.message.successful_payment)) {
+                    console.log('🌟 Пересылаем событие оплаты в Supabase Edge Function...');
+                    try {
+                        const response = await fetch('https://cqmroflpiyhruljtknrw.supabase.co/functions/v1/telegram-webhook', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(update)
+                        });
+                        
+                        // Возвращаем ответ от Supabase обратно в Telegram
+                        const responseData = await response.text();
+                        res.status(response.status).send(responseData);
+                    } catch (e) {
+                         console.error('❌ Ошибка проксирования в Supabase:', e);
+                         res.sendStatus(200); // Чтобы Telegram не повторял запрос при нашей ошибке сети
+                    }
+                    return; // Завершаем выполнение, до GrammY очередь не дойдет
+                }
+                
+                // Все остальные события передаем стандартному боту (включая команды /start)
+                next();
+            }, grammyWebhook);
 
             app.listen(PORT, () => {
                 console.log("Listening on port", PORT);
